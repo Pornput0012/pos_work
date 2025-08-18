@@ -30,7 +30,7 @@ public class SaleItemV2Controller {
             @RequestParam(defaultValue = "[]") List<String> filterBrands,
             @RequestParam(defaultValue = "createdOn") String sortField,
             @RequestParam(defaultValue = "asc") String sortDirection,
-            @RequestParam(required = false) List<Integer> filterStorage,
+            @RequestParam(required = false) List<Integer> filterStorages,
             @RequestParam(required = false) Integer filterPriceLower,
             @RequestParam(required = false) Integer filterPriceUpper) throws MissingServletRequestParameterException {
         
@@ -38,7 +38,7 @@ public class SaleItemV2Controller {
             throw new MissingServletRequestParameterException(page == null ? "page" : "size", "Integer");
         }
         PageDto<SaleItemDto> pagedResult = saleItemService.getAllSaleItemsPage(page, size, filterBrands, sortField,
-                sortDirection, filterStorage, filterPriceLower, filterPriceUpper);
+                sortDirection, filterStorages, filterPriceLower, filterPriceUpper);
         return ResponseEntity.ok(pagedResult);
     }
 

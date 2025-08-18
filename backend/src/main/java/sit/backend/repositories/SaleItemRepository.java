@@ -17,8 +17,8 @@ public interface SaleItemRepository extends JpaRepository<SaleItem, Integer> {
 
     @Query("SELECT s FROM SaleItem s WHERE (:filterBrands IS NULL OR s.brand.name IN :filterBrands) " +
             "AND ( " +
-            "      (:storages IS NULL AND p.storageGb IS NULL) " +
-            "   OR (:storages IS NOT NULL AND p.storageGb IN :storages) " +
+            "      (:filterStorage IS NULL AND s.storageGb IS NULL) " +
+            "   OR (:filterStorage IS NOT NULL AND s.storageGb IN :filterStorage) " +
             ") " +
            "AND (:filterPriceLower IS NULL OR s.price >= :filterPriceLower) " +
            "AND (:filterPriceUpper IS NULL OR s.price <= :filterPriceUpper)")

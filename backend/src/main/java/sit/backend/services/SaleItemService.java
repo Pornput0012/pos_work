@@ -42,7 +42,6 @@ public class SaleItemService {
     @Autowired
     private FileService fileService;
 
-
     public List<SaleItem> getAllSaleItems() {
         return saleItemRepository.findAll();
     }
@@ -53,61 +52,81 @@ public class SaleItemService {
             List<String> filterBrands,
             String sortField,
             String sortDirection,
-            List<Integer> filterStorage,
+            List<Integer> filterStorages,
             Integer filterPriceLower,
             Integer filterPriceUpper) {
+
+        boolean hasSortField = sortField != null && !sortField.isBlank();
+        boolean sortDesc = "desc".equalsIgnoreCase(sortDirection);
 
         if (sortField == null || sortField.trim().isEmpty()) {
             sortField = "createdOn";
         }
-
         if (sortField.equals("brandName")) {
             sortField = "brand.name";
         }
 
-        Sort.Direction direction;
-        try {
-            direction = Sort.Direction.fromString(sortDirection);
-        } catch (Exception e) {
-            direction = Sort.Direction.ASC;
+        Sort sort;
+        if (hasSortField) {
+            sort = sortDesc
+                ? Sort.by(Sort.Order.desc(sortField))
+                : Sort.by(Sort.Order.asc(sortField));
+            sort = sort.and(Sort.by(Sort.Order.asc("id")));
+        } else {
+            sort = sortDesc
+                ? Sort.by(Sort.Order.desc("createdOn")).and(Sort.by(Sort.Order.desc("id")))
+                : Sort.by(Sort.Order.asc("createdOn")).and(Sort.by(Sort.Order.asc("id")));
         }
 
-        // page และ size validation
-        if (page == null || page < 0)
-            page = 0;
-        if (size == null || size <= 0)
-            size = 10;
-
-        Sort sort = Sort.by(new Sort.Order(direction, sortField))
-                .and(Sort.by(Sort.Direction.ASC, "createdOn"));
+        if (page == null || page < 0) page = 0;
+        if (size == null || size <= 0) size = 10;
         Pageable pageable = PageRequest.of(page, size, sort);
 
         // Clean filterBrands
-        List<String> cleanedBrands = (filterBrands == null) ? null : filterBrands.stream()
+        List<String> cleanedBrands = null;
+        if (filterBrands != null) {
+            cleanedBrands = filterBrands.stream()
                 .filter(brand -> brand != null && !brand.trim().isEmpty() && !brand.equals("[]"))
                 .collect(Collectors.toList());
+            if (cleanedBrands.isEmpty()) {
+                cleanedBrands = null;
+            }
+        }
 
         // Convert price filters to BigDecimal
         java.math.BigDecimal priceLower = filterPriceLower != null ? java.math.BigDecimal.valueOf(filterPriceLower) : null;
         java.math.BigDecimal priceUpper = filterPriceUpper != null ? java.math.BigDecimal.valueOf(filterPriceUpper) : null;
 
-        // If all filters are null/empty, use findAll
-        boolean noFilter = (cleanedBrands == null || cleanedBrands.isEmpty()) &&
-                           (filterStorage == null || filterStorage.isEmpty()) &&
-                           priceLower == null && priceUpper == null;
-
-        Page<SaleItem> saleItemPage;
-        if (noFilter) {
-            saleItemPage = saleItemRepository.findAll(pageable);
-        } else {
-            saleItemPage = saleItemRepository.findAllFilter(
-                pageable,
-                cleanedBrands,
-                filterStorage,
-                priceLower,
-                priceUpper
-            );
+        List<Integer> storageParam = null;
+        System.out.println(filterStorages);
+        if (filterStorages != null && !filterStorages.isEmpty()) {
+            if (filterStorages.contains(0)) {
+                // ถ้ามี 0 ให้ filter ทั้ง storageGb เป็น null และ storageGb อยู่ใน filterStorages
+                storageParam = filterStorages.stream().filter(s -> s != 0).collect(java.util.stream.Collectors.toList());
+                System.out.println(storageParam);
+                // ถ้าไม่มี storage จริง (เช่น [0] อย่างเดียว) ให้ storageParam เป็น null
+                if (storageParam.isEmpty()) {
+                    storageParam = null;
+                }
+            } else {
+                storageParam = filterStorages;
+            }
+        } else if (filterStorages == null) {
+            storageParam = new java.util.ArrayList<>();
+            storageParam.add(32);
+            storageParam.add(64);
+            storageParam.add(128);
+            storageParam.add(256);
+            storageParam.add(512);
+            storageParam.add(1024);
         }
+        Page<SaleItem> saleItemPage = saleItemRepository.findAllFilter(
+            pageable,
+            (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+            storageParam,
+            priceLower,
+            priceUpper
+        );
 
         return listMapper.toPageDTO(saleItemPage, SaleItemDto.class, modelMapper);
     }
@@ -115,7 +134,6 @@ public class SaleItemService {
     public SaleItem getSaleItemById(Integer id) {
         return saleItemRepository.findById(id).orElseThrow(() -> new SaleItemNotFound(id));
     }
-
 
     // เพิ่มบรรทัดที่ 31 - 47
     public SaleItem createSaleItem(CreateSaleItemDto dto) {
@@ -137,7 +155,8 @@ public class SaleItemService {
     }
 
     @Transactional
-    public SaleItemResponseDtoV2 createSaleItem(CreateSaleItemDtoV2 saleitem, List<MultipartFile> images) throws BadRequestException {
+    public SaleItemResponseDtoV2 createSaleItem(CreateSaleItemDtoV2 saleitem, List<MultipartFile> images)
+            throws BadRequestException {
 
         if (images != null && images.size() > 4) {
             throw new BadRequestException("Images Size Exceeded");
