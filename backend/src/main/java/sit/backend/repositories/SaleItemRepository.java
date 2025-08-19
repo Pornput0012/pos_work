@@ -30,5 +30,14 @@ public interface SaleItemRepository extends JpaRepository<SaleItem, Integer> {
         @Param("filterPriceUpper") java.math.BigDecimal filterPriceUpper
     );
 
+    @Query("SELECT s FROM SaleItem s WHERE (:filterBrands IS NULL OR s.brand.name IN :filterBrands) " +
+            "AND (:filterPriceLower IS NULL OR s.price >= :filterPriceLower) " +
+            "AND (:filterPriceUpper IS NULL OR s.price <= :filterPriceUpper)")
+    Page<SaleItem> findAllFilterAndNoFilterStorage(
+            Pageable page,
+            @Param("filterBrands") List<String> filterBrands,
+            @Param("filterPriceLower") java.math.BigDecimal filterPriceLower,
+            @Param("filterPriceUpper") java.math.BigDecimal filterPriceUpper
+    );
 
 }

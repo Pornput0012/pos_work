@@ -18,6 +18,7 @@ import sit.backend.exception.SaleItemNotFound;
 import sit.backend.repositories.BrandRepository;
 import sit.backend.repositories.SaleItemRepository;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -94,13 +95,13 @@ public class SaleItemService {
         }
 
         // Convert price filters to BigDecimal
-        java.math.BigDecimal priceLower = filterPriceLower != null ? java.math.BigDecimal.valueOf(filterPriceLower) : null;
-        java.math.BigDecimal priceUpper = filterPriceUpper != null ? java.math.BigDecimal.valueOf(filterPriceUpper) : null;
+        BigDecimal priceLower = filterPriceLower != null ? BigDecimal.valueOf(filterPriceLower) : null;
+        BigDecimal priceUpper = filterPriceUpper != null ? BigDecimal.valueOf(filterPriceUpper) : null;
 
         List<SaleItem> allItems = new java.util.ArrayList<>();
         if (filterStorages != null && !filterStorages.isEmpty()) {
             boolean hasZero = filterStorages.contains(0);
-            List<Integer> nonZeroStorages = filterStorages.stream().filter(s -> s != 0).collect(java.util.stream.Collectors.toList());
+            List<Integer> nonZeroStorages = filterStorages.stream().filter(ele -> ele != 0).toList();
             if (hasZero && !nonZeroStorages.isEmpty()) {
                 // Query รอบแรก: เฉพาะเลขที่ไม่ใช่ 0
                 Page<SaleItem> pageNonZero = saleItemRepository.findAllFilter(
@@ -148,17 +149,15 @@ public class SaleItemService {
                 );
                 return listMapper.toPageDTO(pageNonZero, SaleItemDto.class, modelMapper);
             }
-        } else if (filterStorages == null) {
-            List<Integer> defaultStorages = java.util.Arrays.asList(32,64,128,256,512,1024);
-            Page<SaleItem> pageDefault = saleItemRepository.findAllFilter(
-                pageable,
-                (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
-                defaultStorages,
-                priceLower,
-                priceUpper
-            );
-            return listMapper.toPageDTO(pageDefault, SaleItemDto.class, modelMapper);
-        }
+            } else if (filterStorages == null) {
+                Page<SaleItem> pageDefault = saleItemRepository.findAllFilterAndNoFilterStorage(
+                    pageable,
+                    (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+                    priceLower,
+                    priceUpper
+                );
+                return listMapper.toPageDTO(pageDefault, SaleItemDto.class, modelMapper);
+            }
         return null;
     }
 
