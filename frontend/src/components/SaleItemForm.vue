@@ -1,4 +1,134 @@
 <script setup>
+import iPhoneNoPhoto from '@/assets/iPhone_15_Black.png'
+// ...existing code...
+// --- Image Upload Logic ---
+const originalImages = ref([])
+const images = ref([])
+const deletedImageFileNames = ref([])
+const showImage = ref(iPhoneNoPhoto)
+const showImageIndex = ref(-1)
+const uploadInput = ref(null)
+const MAX_SIZE_BYTES = 2 * 1024 * 1024
+const maxImages = 4
+
+const uploadImage = (event) => {
+  const files = Array.from(event.target.files)
+  const activeImagesCount = images.value.filter(img => !img.isDeleted).length
+  const availableSlots = maxImages - activeImagesCount
+  if (availableSlots === 0) {
+    alert('All 4 image slots are occupied. Please remove some images first.')
+    event.target.value = ""
+    return
+  }
+  let filesToProcess = files.slice(0, availableSlots)
+  filesToProcess.forEach((file, i) => {
+    if (file.size > MAX_SIZE_BYTES) {
+      alert(`File "${file.name}" exceeds the 2MB limit.`)
+    } else {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const fileName = generateUniqueFileName(file.name)
+        const image = {
+          imageName: fileName,
+          src: e.target.result,
+          file,
+          isOriginal: false,
+          isDeleted: false,
+        }
+        let insertIndex = images.value.findIndex(img => img.isDeleted)
+        if (insertIndex === -1) {
+          images.value.push(image)
+          insertIndex = images.value.length - 1
+        } else {
+          images.value[insertIndex] = image
+        }
+        if (showImageIndex.value === -1 || images.value[showImageIndex.value]?.isDeleted) {
+          showImageIndex.value = insertIndex
+          showImage.value = e.target.result
+        }
+      }
+      reader.readAsDataURL(file)
+    }
+  })
+  event.target.value = ""
+}
+
+const generateUniqueFileName = (originalName) => {
+  const isDuplicate = images.value.some(img => img.imageName === originalName)
+  if (!isDuplicate) return originalName
+  const nameParts = originalName.split(".")
+  const baseName = nameParts.slice(0, -1).join(".") || nameParts[0]
+  const ext = nameParts.length > 1 ? "." + nameParts[nameParts.length - 1] : ""
+  let suffix = 1
+  let newName = `${baseName}(${suffix})${ext}`
+  while (images.value.some(img => img.imageName === newName)) {
+    suffix++
+    newName = `${baseName}(${suffix})${ext}`
+  }
+  return newName
+}
+
+const swapUpImage = (i) => {
+  if (i > 0) {
+    let temp = images.value[i]
+    images.value[i] = images.value[i - 1]
+    images.value[i - 1] = temp
+    if (showImageIndex.value === i) {
+      showImageIndex.value = i - 1
+    } else if (showImageIndex.value === i - 1) {
+      showImageIndex.value = i
+    }
+    if (i - 1 === 0) {
+      showImage.value = images.value[0].src
+    }
+  }
+}
+
+const swapDownImage = (i) => {
+  if (i < images.value.length - 1) {
+    if (showImageIndex.value === i) {
+      showImageIndex.value = i + 1
+    } else if (showImageIndex.value === i + 1) {
+      showImageIndex.value = i
+    }
+    if (i === 0) {
+      showImage.value = images.value[1].src
+    }
+    let temp = images.value[i]
+    images.value[i] = images.value[i + 1]
+    images.value[i + 1] = temp
+  }
+}
+
+const removeImage = (index) => {
+  const imageToRemove = images.value[index]
+  if (imageToRemove.isOriginal && imageToRemove.imageName) {
+    deletedImageFileNames.value.push(imageToRemove.imageName)
+  }
+  images.value[index] = {
+    imageName: "",
+    src: null,
+    isOriginal: false,
+    isDeleted: true,
+    originalPosition: index + 1,
+  }
+  if (index === showImageIndex.value) {
+    let nextValidImageIndex = -1
+    for (let i = 0; i < images.value.length; i++) {
+      if (!images.value[i].isDeleted) {
+        nextValidImageIndex = i
+        break
+      }
+    }
+    if (nextValidImageIndex !== -1) {
+      showImageIndex.value = nextValidImageIndex
+      showImage.value = images.value[nextValidImageIndex].src
+    } else {
+      showImage.value = iPhoneNoPhoto
+      showImageIndex.value = -1
+    }
+  }
+}
 import { ref, watch, onMounted, computed, reactive } from "vue";
 import fetchUtil from "@/libs/fetchUtil.js";
 import BaseButton from "@/components/BaseButton.vue";
@@ -137,46 +267,46 @@ const trimField = (field) => {
 
 const handleSubmit = async () => {
   if (!isFormValid.value) {
-    console.warn("การส่งฟอร์มถูกบล็อก: ฟอร์มไม่ถูกต้อง");
-    alert("กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง");
-    return;
+    alert("กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง")
+    return
   }
-
-  const payload = {
-    brand: {
-      id: form.brandId,
-    },
-    model: form.model.trim(),
-    price: form.price != null ? Number(form.price) : null,
-    description: form.description.trim(),
-    ramGb: form.ramGb != null ? Number(form.ramGb) : null,
-    screenSizeInch:
-      form.screenSizeInch != null ? Number(form.screenSizeInch) : null,
-    storageGb: form.storageGb != null ? Number(form.storageGb) : null,
-    color: form.color?.trim() || null,
-    quantity: form.quantity != null ? Number(form.quantity) : null,
-  };
-
+  if (form.screenSizeInch != null && form.screenSizeInch > 99.99) {
+    alert("ขนาดหน้าจอสูงสุดที่รองรับคือ 99.99 นิ้ว")
+    return
+  }
+  // สร้าง FormData
+  const formData = new FormData()
+  formData.append("brandId", form.brandId)
+  formData.append("model", form.model.trim())
+  formData.append("price", form.price != null ? Number(form.price) : "")
+  formData.append("description", form.description.trim())
+  formData.append("ramGb", form.ramGb != null ? Number(form.ramGb) : "")
+  formData.append("screenSizeInch", form.screenSizeInch != null ? Number(form.screenSizeInch) : "")
+  formData.append("storageGb", form.storageGb != null ? Number(form.storageGb) : "")
+  formData.append("color", form.color?.trim() || "")
+  formData.append("quantity", form.quantity != null ? Number(form.quantity) : "")
+  // แนบรูปภาพ
+  images.value.filter(img => !img.isDeleted && img.file).forEach((img, idx) => {
+    const splitFileName = img.imageName.split('.')
+    const ext = splitFileName.pop()
+    const joinFileName = splitFileName.join('.')
+    const fileName = `${joinFileName}.${idx + 1}.${ext}`
+    formData.append("images", img.file, fileName)
+  })
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/v1/sale-items`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/v2/sale-items`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
+      body: formData,
+    })
     if (res.ok) {
-      const data = await res.json();
-      emit("submit", data);
+      const data = await res.json()
+      emit("submit", data)
     } else {
-      const errorText = await res.text();
-      console.error("❌ ข้อผิดพลาดจากเซิร์ฟเวอร์:", errorText);
-      alert(`เกิดข้อผิดพลาด (${res.status}): ${errorText}`);
+      const errorText = await res.text()
+      alert(`เกิดข้อผิดพลาด (${res.status}): ${errorText}`)
     }
   } catch (err) {
-    console.error("🚫 การร้องขอล้มเหลว:", err);
-    alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+    alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้")
   }
 };
 </script>
@@ -361,6 +491,57 @@ const handleSubmit = async () => {
           </div>
         </div>
 
+        <!-- Image Upload Section -->
+        <div class="mb-8">
+          <div class="flex flex-col items-center gap-4">
+            <div class="border-2 rounded-2xl w-64 h-64 flex items-center justify-center">
+              <img :src="showImage" class="w-full h-full object-contain rounded-2xl" alt="Preview" />
+            </div>
+            <div class="flex gap-4 mt-4 w-full justify-center items-center overflow-auto">
+              <div v-for="(image, index) in images" :key="`image-${index}`" class="relative flex flex-col items-center">
+                <div v-if="image.isDeleted" class="max-h-20 h-20 w-14 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center bg-gray-50 opacity-60">
+                  <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <img v-else class="max-h-20 h-20 w-14 border object-cover rounded-2xl cursor-pointer" :src="image.src" alt="" :class="showImageIndex == index ? 'border-2 border-blue-600 hover:border-black' : 'hover:border-blue-500'" @click="showImage = image.src; showImageIndex = index;" />
+                <span class="text-xs mt-1" :class="image.isDeleted ? 'text-gray-400 line-through' : 'text-gray-600'">{{ index + 1 }}</span>
+                <div class="text-xs mt-1">
+                  <span v-if="image.isDeleted" class="text-gray-500 font-semibold">Deleted</span>
+                  <span v-else-if="image.isOriginal" class="text-green-600 font-semibold">Original</span>
+                  <span v-else class="text-blue-600 font-semibold">New</span>
+                </div>
+                <div class="flex gap-1 mt-1">
+                  <button v-if="!image.isDeleted && index > 0" class="p-1 bg-gray-100 rounded hover:bg-gray-200" @click="swapUpImage(index)">
+                    <img class="w-3 h-3" src="/src/assets/bxs--up-arrow.svg" alt="Up" />
+                  </button>
+                  <button v-if="!image.isDeleted && index < images.length - 1" class="p-1 bg-gray-100 rounded hover:bg-gray-200" @click="swapDownImage(index)">
+                    <img class="w-3 h-3" src="/src/assets/bxs--down-arrow.svg" alt="Down" />
+                  </button>
+                  <button v-if="!image.isDeleted" class="text-red-500 cursor-pointer hover:text-red-700 hover:bg-red-100 p-1 rounded" @click="removeImage(index)">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div v-for="i in Math.max(0, 4 - images.length)" :key="`empty-${i}`" class="relative flex flex-col items-center">
+                <div class="max-h-20 h-20 w-14 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center bg-gray-50">
+                  <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <span class="text-xs text-gray-400 mt-1">{{ images.length + i }}</span>
+                <div class="text-xs mt-1"><span class="text-gray-400">Empty</span></div>
+              </div>
+            </div>
+            <div class="flex flex-col items-center gap-2 mt-2">
+              <button type="button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded cursor-pointer" @click="uploadInput.click()">Upload Images</button>
+              <p class="text-sm text-gray-500">{{ images.filter(img => !img.isDeleted).length }}/4 images uploaded</p>
+            </div>
+            <input id="file-upload" type="file" class="hidden" ref="uploadInput" multiple accept="image/*" @change="uploadImage" />
+          </div>
+        </div>
         <div class="mt-6 flex gap-2">
           <BaseButton
             variant="save"
