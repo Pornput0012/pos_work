@@ -139,4 +139,10 @@ VALUES
 (84, 10, 'A77', 'Budget friendly', 20, 8250, 6.56, 6, 128, 'Ocean Blue', '2021-10-15 09:50:00', '2023-10-30 10:45:00'),
 (85, 10, 'Reno6 Pro', 'Classic premium', 7, 16500, 6.55, 12, 256, 'Arctic Blue', '2021-10-20 14:15:00', '2023-10-20 13:30:00');
 
-
+CREATE TABLE IF NOT EXISTS sale_item_images (
+    image_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+    saleitem_id INTEGER NOT NULL,
+    fileName VARCHAR(255) NOT NULL,
+    imageViewOrder INTEGER,
+    FOREIGN KEY (saleitem_id) REFERENCES sale_item(id) ON DELETE CASCADE
+);
