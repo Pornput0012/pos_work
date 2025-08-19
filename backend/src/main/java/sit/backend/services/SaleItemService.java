@@ -97,38 +97,69 @@ public class SaleItemService {
         java.math.BigDecimal priceLower = filterPriceLower != null ? java.math.BigDecimal.valueOf(filterPriceLower) : null;
         java.math.BigDecimal priceUpper = filterPriceUpper != null ? java.math.BigDecimal.valueOf(filterPriceUpper) : null;
 
-        List<Integer> storageParam = null;
-        System.out.println(filterStorages);
+        List<SaleItem> allItems = new java.util.ArrayList<>();
         if (filterStorages != null && !filterStorages.isEmpty()) {
-            if (filterStorages.contains(0)) {
-                // ถ้ามี 0 ให้ filter ทั้ง storageGb เป็น null และ storageGb อยู่ใน filterStorages
-                storageParam = filterStorages.stream().filter(s -> s != 0).collect(java.util.stream.Collectors.toList());
-                System.out.println(storageParam);
-                // ถ้าไม่มี storage จริง (เช่น [0] อย่างเดียว) ให้ storageParam เป็น null
-                if (storageParam.isEmpty()) {
-                    storageParam = null;
-                }
+            boolean hasZero = filterStorages.contains(0);
+            List<Integer> nonZeroStorages = filterStorages.stream().filter(s -> s != 0).collect(java.util.stream.Collectors.toList());
+            if (hasZero && !nonZeroStorages.isEmpty()) {
+                // Query รอบแรก: เฉพาะเลขที่ไม่ใช่ 0
+                Page<SaleItem> pageNonZero = saleItemRepository.findAllFilter(
+                    pageable,
+                    (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+                    nonZeroStorages,
+                    priceLower,
+                    priceUpper
+                );
+                allItems.addAll(pageNonZero.getContent());
+                // Query รอบสอง: เฉพาะ null
+                Page<SaleItem> pageNull = saleItemRepository.findAllFilter(
+                    pageable,
+                    (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+                    null,
+                    priceLower,
+                    priceUpper
+                );
+                allItems.addAll(pageNull.getContent());
+                // สร้าง PageDto จาก allItems
+                PageDto<SaleItemDto> result = new PageDto<SaleItemDto>();
+                result.setContent(listMapper.mapList(allItems, SaleItemDto.class, modelMapper));
+                result.setTotalPages(1); // กรณีรวมผลลัพธ์
+                result.setPage(page);
+                result.setSize(size);
+                return result;
+            } else if (hasZero) {
+                // มีแต่ 0: query เฉพาะ null
+                Page<SaleItem> pageNull = saleItemRepository.findAllFilter(
+                    pageable,
+                    (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+                    null,
+                    priceLower,
+                    priceUpper
+                );
+                return listMapper.toPageDTO(pageNull, SaleItemDto.class, modelMapper);
             } else {
-                storageParam = filterStorages;
+                // มีแต่เลขอื่น: query ปกติ
+                Page<SaleItem> pageNonZero = saleItemRepository.findAllFilter(
+                    pageable,
+                    (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+                    filterStorages,
+                    priceLower,
+                    priceUpper
+                );
+                return listMapper.toPageDTO(pageNonZero, SaleItemDto.class, modelMapper);
             }
         } else if (filterStorages == null) {
-            storageParam = new java.util.ArrayList<>();
-            storageParam.add(32);
-            storageParam.add(64);
-            storageParam.add(128);
-            storageParam.add(256);
-            storageParam.add(512);
-            storageParam.add(1024);
+            List<Integer> defaultStorages = java.util.Arrays.asList(32,64,128,256,512,1024);
+            Page<SaleItem> pageDefault = saleItemRepository.findAllFilter(
+                pageable,
+                (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+                defaultStorages,
+                priceLower,
+                priceUpper
+            );
+            return listMapper.toPageDTO(pageDefault, SaleItemDto.class, modelMapper);
         }
-        Page<SaleItem> saleItemPage = saleItemRepository.findAllFilter(
-            pageable,
-            (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
-            storageParam,
-            priceLower,
-            priceUpper
-        );
-
-        return listMapper.toPageDTO(saleItemPage, SaleItemDto.class, modelMapper);
+        return null;
     }
 
     public SaleItem getSaleItemById(Integer id) {
