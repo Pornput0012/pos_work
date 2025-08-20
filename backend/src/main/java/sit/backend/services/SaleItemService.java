@@ -100,8 +100,8 @@ public class SaleItemService {
 
         List<SaleItem> allItems = new java.util.ArrayList<>();
         if (filterStorages != null && !filterStorages.isEmpty()) {
-            boolean hasZero = filterStorages.contains(0);
-            List<Integer> nonZeroStorages = filterStorages.stream().filter(ele -> ele != 0).toList();
+            boolean hasZero = filterStorages.contains(-1);
+            List<Integer> nonZeroStorages = filterStorages.stream().filter(ele -> ele != -1).toList();
             if (hasZero && !nonZeroStorages.isEmpty()) {
                 // Query รอบแรก: เฉพาะเลขที่ไม่ใช่ 0
                 Page<SaleItem> pageNonZero = saleItemRepository.findAllFilter(
@@ -124,7 +124,7 @@ public class SaleItemService {
                 // สร้าง PageDto จาก allItems
                 PageDto<SaleItemDto> result = new PageDto<SaleItemDto>();
                 result.setContent(listMapper.mapList(allItems, SaleItemDto.class, modelMapper));
-                result.setTotalPages(1); // กรณีรวมผลลัพธ์
+                result.setTotalPages(1); 
                 result.setPage(page);
                 result.setSize(size);
                 return result;
