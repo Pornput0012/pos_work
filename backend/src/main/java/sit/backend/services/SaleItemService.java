@@ -184,7 +184,7 @@ public class SaleItemService {
         return saleItemRepository.save(item);
     }
 
-    @Transactional
+      @Transactional
     public SaleItemResponseDtoV2 createSaleItem(CreateSaleItemDtoV2 saleitem, List<MultipartFile> images)
             throws BadRequestException {
 
@@ -199,16 +199,38 @@ public class SaleItemService {
         creatingProduct.setId(null);
 
         SaleItem prodRes = saleItemRepository.save(creatingProduct);
+
         if (images != null && !images.isEmpty()) {
-            fileService.saveFile(images, prodRes);
+            List<MultipartFile> sortedImages = images.stream()
+                    .sorted((img1, img2) -> {
+                        int order1 = extractOrderFromFilename(img1.getOriginalFilename());
+                        int order2 = extractOrderFromFilename(img2.getOriginalFilename());
+                        return Integer.compare(order1, order2);
+                    })
+                    .collect(Collectors.toList());
+
+            fileService.saveFile(sortedImages, prodRes);
         }
 
         saleItemRepository.flush();
-
         entityManager.refresh(prodRes);
         return modelMapper.map(prodRes, SaleItemResponseDtoV2.class);
     }
 
+    private int extractOrderFromFilename(String filename) {
+        if (filename == null) return 0;
+
+        String[] parts = filename.split("\\.");
+        if (parts.length >= 3) {
+            try {
+                return Integer.parseInt(parts[parts.length - 2]);
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
+        return 0;
+    }
+    
     public SaleItem updateSaleItem(Integer id, CreateSaleItemDto dto) {
         SaleItem existing = saleItemRepository.findById(id)
                 .orElseThrow(() -> new SaleItemNotFound(id));
@@ -251,3 +273,4 @@ public class SaleItemService {
         return saleItemRepository.findByBrandIdIn(brandIds);
     }
 }
+
