@@ -24,6 +24,9 @@ public class CreateSaleItemDtoV2 {
         return color == null || color.trim().isEmpty() ? null : color.trim();
     }
     private Integer quantity;
+    private String removeFileNames;
+
+    private String orderImages;
     public void setQuantity(Integer quantity) { {
         this.quantity = (quantity != null && quantity >= 0) ? quantity : 1 ;
     }

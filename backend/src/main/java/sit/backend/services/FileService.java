@@ -85,4 +85,86 @@ public class FileService {
         images.forEach(image -> fileNames.add(saveFile(image, product)));
         return fileNames;
     }
+
+    public Resource loadFileAsResource(String fileName) {
+        try {
+            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists()) {
+                return resource;
+            } else {
+                throw new RuntimeException("File not found " + fileName);
+            }
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException("File operation error: " + fileName, ex);
+        }
+    }
+
+    public void removeFile(SaleItem saleItem, String fileName) {
+        try {
+            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+            if (Files.exists(filePath)) {
+                Files.delete(filePath);
+                saleItemImageRepository.deleteByFileNameAndSaleItemId(fileName, saleItem.getId());
+            } else {
+                throw new ResourceNotFoundException("File not found " + fileName);
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException("File operation (DELETE) error: " + fileName, ex);
+        }
+    }
+
+
+    public void removeFiles(SaleItem saleItem, List<String> fileNames) {
+        List<String> failedFiles = new ArrayList<>();
+
+        for (String fileName : fileNames) {
+            try {
+                removeFile(saleItem, fileName);
+            } catch (Exception ex) {
+                failedFiles.add(fileName);
+            }
+        }
+
+        if (!failedFiles.isEmpty()) {
+            throw new RuntimeException("Failed to delete files: " + String.join(", ", failedFiles));
+        }
+    }
+
+    public void removeFileNormal(String fileName) {
+        try {
+            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+
+            if (Files.exists(filePath)) {
+                Files.delete(filePath);
+            } else {
+                throw new RuntimeException("File not found " + fileName);
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException("File operation error: " + fileName, ex);
+        }
+    }
+
+
+    public void renameFile( String oldFileName, String newFileName) {
+        try {
+            Path oldFilePath = this.fileStorageLocation.resolve(oldFileName).normalize();
+            Path newFilePath = this.fileStorageLocation.resolve(newFileName).normalize();
+            if (Files.exists(oldFilePath)) {
+                Files.move(oldFilePath, newFilePath, StandardCopyOption.REPLACE_EXISTING);
+            } else {
+                throw new RuntimeException("File not found " + oldFileName);
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException("File operation (RENAME) error: " + oldFileName + " to " + newFileName, ex);
+        }
+    }
+
+    public boolean fileExists(SaleItem saleItem, String fileName) {
+        // สมมติว่าไฟล์อยู่ในโฟลเดอร์ picture/{product.id}/
+        File file = new java.io.File("picture/" + saleItem.getId() + "/" + fileName);
+        return file.exists();
+    }
 }

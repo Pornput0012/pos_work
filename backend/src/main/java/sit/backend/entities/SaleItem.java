@@ -61,7 +61,8 @@ public class SaleItem {
     @org.hibernate.annotations.Generated(org.hibernate.annotations.GenerationTime.ALWAYS)
     private Instant updatedOn;
 
-    @OneToMany(mappedBy = "saleItem", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "saleItem",fetch = FetchType.EAGER)
     private List<SaleItemImage> saleItemImages = new ArrayList<>();
 
 }
+

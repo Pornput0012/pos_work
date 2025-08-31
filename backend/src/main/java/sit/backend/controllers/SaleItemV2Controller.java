@@ -4,15 +4,21 @@ import org.apache.coyote.BadRequestException;
 import org.hibernate.annotations.Parameter;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import sit.backend.dtos.*;
+import sit.backend.services.FileService;
 import sit.backend.services.SaleItemService;
 
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 @RestController
@@ -22,6 +28,8 @@ public class SaleItemV2Controller {
     private ModelMapper modelMapper;
     @Autowired
     private SaleItemService saleItemService;
+    @Autowired
+    private FileService fileService;
 
     @GetMapping("")
     public ResponseEntity<PageDto<SaleItemDto>> getAllSaleItemsPage(
@@ -49,6 +57,32 @@ public class SaleItemV2Controller {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(saleItemService.createSaleItem(product, images));
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<SaleItemResponseDtoV2> getProductByIdV2(@PathVariable Integer id) {
+        return ResponseEntity.ok(saleItemService.getProductByIdV2(id));
+    }
+
+
+    @PutMapping("/{id}")
+    public ResponseEntity<SaleItemResponseDtoV2> updateProductV2(
+            @PathVariable Integer id,
+            @ModelAttribute CreateSaleItemDtoV2 product,
+            @RequestParam(required = false) List<MultipartFile> newImages) {
+        return ResponseEntity.ok(saleItemService.updateProductV2(id, product, product.getRemoveFileNames(), product.getOrderImages(), newImages));
+    }
+
+    @PutMapping("/{id}/images")
+    public ResponseEntity<SaleItemResponseDtoV2> updateProductImages(
+            @PathVariable Integer id,
+             @ModelAttribute CreateSaleItemDtoV2 productImageInfo,
+            @RequestParam(required = false) List<MultipartFile> newImages) {
+        return ResponseEntity.ok(saleItemService.updateProductV2(id, productImageInfo.getRemoveFileNames(), productImageInfo.getOrderImages(), newImages));
+    }
+
+
+
+
 
 
 }
