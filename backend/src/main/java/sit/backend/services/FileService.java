@@ -167,4 +167,7 @@ public class FileService {
         File file = new java.io.File("picture/" + saleItem.getId() + "/" + fileName);
         return file.exists();
     }
+
+    public void deleteFile(String fileName) {
+    }
 }

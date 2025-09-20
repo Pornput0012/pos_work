@@ -80,9 +80,10 @@ public class SaleItemV2Controller {
         return ResponseEntity.ok(saleItemService.updateProductV2(id, productImageInfo.getRemoveFileNames(), productImageInfo.getOrderImages(), newImages));
     }
 
-
-
-
-
-
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSaleItem(@PathVariable Integer id) {
+        // เรียก service สำหรับลบสินค้าและรูปภาพทั้งหมด
+        saleItemService.deleteSaleItemV2(id);
+        return ResponseEntity.noContent().build();
+    }
 }

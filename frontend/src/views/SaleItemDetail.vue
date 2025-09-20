@@ -28,7 +28,7 @@ const handleDelete = () => {
 
 const confirmDelete = async () => {
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/v1/sale-items/${route.params.id}`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/v2/sale-items/${route.params.id}`, {
       method: 'DELETE'
     })
 
@@ -73,7 +73,7 @@ onMounted(async () => {
   }
 
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/v1/sale-items/${id}`)
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/v2/sale-items/${id}`)
 
     if (res.ok) {
       item.value = await res.json()

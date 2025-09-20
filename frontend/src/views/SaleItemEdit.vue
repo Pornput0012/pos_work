@@ -214,7 +214,6 @@ const generateUniqueFileName = (originalName) => {
 
 const swapUpImage = (i) => {
   if (i <= 0) return;
-  
   const temp = images.value[i];
   images.value[i] = images.value[i - 1];
   images.value[i - 1] = temp;
@@ -229,14 +228,36 @@ const swapUpImage = (i) => {
 };
 
 const swapDownImage = (i) => {
-  while (images.value.length < maxImages) {
-    images.value.push({
-      imageName: "",
-      src: null,
-      isOriginal: false,
-      isDeleted: false,
-      isEmpty: true,
-    });
+  const activeIdx = activeImages.value.indexOf(images.value[i]);
+  if (activeIdx === -1) return;
+
+  if (activeImages.value.length > 1) {
+    const nextActiveImage = activeImages.value[activeIdx + 1];
+    if (!nextActiveImage) return;
+    const nextIndex = images.value.indexOf(nextActiveImage);
+    const temp = images.value[i];
+    images.value[i] = images.value[nextIndex];
+    images.value[nextIndex] = temp;
+
+    if (showImageIndex.value === i) {
+      showImageIndex.value = nextIndex;
+    } else if (showImageIndex.value === nextIndex) {
+      showImageIndex.value = i;
+    }
+    updateReorderedImages();
+    return;
+  }
+
+  if (images.value.length < maxImages) {
+    while (images.value.length < maxImages) {
+      images.value.push({
+        imageName: "",
+        src: null,
+        isOriginal: false,
+        isDeleted: false,
+        isEmpty: true,
+      });
+    }
   }
 
   const nextIndex = i + 1;

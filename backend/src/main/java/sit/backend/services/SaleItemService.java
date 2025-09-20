@@ -470,4 +470,27 @@ public class SaleItemService {
         return modelMapper.map(updatedProduct, SaleItemResponseDtoV2.class);
     }
 
+    @Transactional
+    public void deleteSaleItemV2(Integer id) {
+        // 1. หา SaleItem
+        SaleItem item = saleItemRepository.findById(id)
+                .orElseThrow(() -> new SaleItemNotFound(id));
+
+        // 2. ดึงรูปทั้งหมดของสินค้านี้
+        List<SaleItemImage> images = saleItemImageService.findAllBySaleItem(id);
+
+        // 3. ลบไฟล์จริงและลบ record ใน DB
+        for (SaleItemImage img : images) {
+            try {
+                fileService.deleteFile(img.getFileName()); // ลบไฟล์จริง
+                saleItemImageService.deleteImage(img.getId()); // ลบ record DB
+            } catch (Exception e) {
+                System.err.println("Failed to delete image: " + img.getFileName());
+            }
+        }
+
+        // 4. ลบ SaleItem
+        saleItemRepository.delete(item);
+    }
+
 }
