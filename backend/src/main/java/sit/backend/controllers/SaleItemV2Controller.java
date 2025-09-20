@@ -40,13 +40,15 @@ public class SaleItemV2Controller {
             @RequestParam(defaultValue = "asc") String sortDirection,
             @RequestParam(required = false) List<Integer> filterStorages,
             @RequestParam(required = false) Integer filterPriceLower,
-            @RequestParam(required = false) Integer filterPriceUpper) throws MissingServletRequestParameterException {
+            @RequestParam(required = false) Integer filterPriceUpper,
+            @RequestParam(required = false) String searchKeyword) throws MissingServletRequestParameterException {
         
         if (page == null || size == null) {
             throw new MissingServletRequestParameterException(page == null ? "page" : "size", "Integer");
         }
         PageDto<SaleItemDto> pagedResult = saleItemService.getAllSaleItemsPage(page, size, filterBrands, sortField,
-                sortDirection, filterStorages, filterPriceLower, filterPriceUpper);
+                sortDirection, filterStorages, filterPriceLower, filterPriceUpper, searchKeyword);
+        System.out.println(searchKeyword);
         return ResponseEntity.ok(pagedResult);
     }
 

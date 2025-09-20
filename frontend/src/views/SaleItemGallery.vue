@@ -19,6 +19,7 @@ const filters = ref({
   filterStorages: [],
   filterPriceLower: "",
   filterPriceUpper: "",
+  searchKeyword: "",
 });
 
 const paginationRef = ref();
@@ -27,7 +28,8 @@ const isLoading = ref(true);
 const error = ref(null);
 const sortedItems = ref([]);
 const brands = ref([]);
-const storageOptions = ref([32, 64, 128, 256, 512, 1024, -1]);
+const brandOptions = ref([]);
+const storageOptions = ref([32, 64, 128, 256, 512, 1024, 0]);
 const priceRangeOptions = ref([
   { label: "0 – 5,000", min: 0, max: 5000 },
   { label: "5,001 – 10,000", min: 5001, max: 10000 },
@@ -56,13 +58,9 @@ onClickOutside(dropdownRef, () => {
 const totalPages = computed(() => productStore.allPages);
 const products = computed(() => productStore.allProducts);
 
-// ✅ computed: แบรนด์เรียง A → Z
-const sortedBrands = computed(() =>
-  [...brands.value].sort((a, b) => a.name.localeCompare(b.name))
-);
-
 const fetchSaleItemsWithFilter = async () => {
   try {
+    // สร้าง query string เฉพาะ key ที่ไม่เป็นค่า falsy
     const params = Object.entries(filters.value)
       .filter(([_, v]) => {
         if (Array.isArray(v)) return v.length > 0;
@@ -70,6 +68,7 @@ const fetchSaleItemsWithFilter = async () => {
       })
       .map(([k, v]) => {
         if (Array.isArray(v)) {
+          // ส่ง filterStorages เป็น comma-separated
           if (k === "filterStorages") {
             return `${encodeURIComponent(k)}=${v.join(",")}`;
           }
@@ -81,6 +80,7 @@ const fetchSaleItemsWithFilter = async () => {
       })
       .join("&");
 
+    // สมมติว่า productStore.loadAllPages/loadProductsPage รองรับ query string
     await productStore.loadAllPages(params);
     await productStore.loadProductsPage(params);
     sortedItems.value = [...products.value];
@@ -123,7 +123,6 @@ const setSort = (option) => {
   trigger.value++;
 };
 
-// Brand filter
 const toggleBrand = (brand) => {
   if (selectedBrands.value.some((b) => b.id === brand.id)) {
     removeBrand(brand);
@@ -133,6 +132,15 @@ const toggleBrand = (brand) => {
     filters.value.page = 0;
     trigger.value++;
   }
+};
+const selectBrand = (brand) => {
+  if (!selectedBrands.value.includes(brand)) {
+    selectedBrands.value.push(brand);
+    filters.value.filterBrands = [...selectedBrands.value];
+    filters.value.page = 0;
+    trigger.value++;
+  }
+  showBrandDropdown.value = false;
 };
 const removeBrand = (brand) => {
   selectedBrands.value = selectedBrands.value.filter((b) => b.id !== brand.id);
@@ -147,12 +155,19 @@ const toggleStorage = (storage) => {
     removeStorage(storage);
   } else {
     selectedStorages.value.push(storage);
-    filters.value.filterStorages = selectedStorages.value.map((s) =>
-      s === -1 ? -1 : s
-    );
+    filters.value.filterStorages = [...selectedStorages.value];
     filters.value.page = 0;
     trigger.value++;
   }
+};
+const selectStorage = (storage) => {
+  if (!selectedStorages.value.includes(storage)) {
+    selectedStorages.value.push(storage);
+    filters.value.filterStorages = [...selectedStorages.value];
+    filters.value.page = 0;
+    trigger.value++;
+  }
+  showStorageDropdown.value = false;
 };
 const removeStorage = (storage) => {
   selectedStorages.value = selectedStorages.value.filter((s) => s !== storage);
@@ -209,52 +224,19 @@ watch(trigger, () => fetchSaleItemsWithFilter());
 onMounted(async () => {
   const res = await fetch(`${import.meta.env.VITE_API_URL}/v1/brands`);
   brands.value = await res.json();
-
-  const saved = sessionStorage.getItem("saleItemsFilters");
-  if (saved) {
-    try {
-      const state = JSON.parse(saved);
-      filters.value = { ...filters.value, ...state.filters };
-      if (state.selectedBrands?.length) {
-        selectedBrands.value = brands.value.filter((b) =>
-          state.selectedBrands.some((sb) => sb.name === b.name)
-        );
-        filters.value.filterBrands = selectedBrands.value.map((b) => b.name);
-      }
-      selectedStorages.value = state.selectedStorages || [];
-      filters.value.filterStorages = [...selectedStorages.value];
-      selectedPrices.value = state.selectedPrices || { min: null, max: null };
-      filters.value.filterPriceLower = selectedPrices.value.min;
-      filters.value.filterPriceUpper = selectedPrices.value.max;
-    } catch (e) {
-      console.error("Failed to restore state:", e);
-    }
-  }
   await fetchSaleItemsWithFilter();
 });
 
 const goToAddItem = () => router.push("/sale-items/add");
-
-watch(
-  [filters, selectedBrands, selectedStorages, selectedPrices],
-  () => {
-    const state = {
-      filters: filters.value,
-      selectedBrands: selectedBrands.value,
-      selectedStorages: selectedStorages.value,
-      selectedPrices: selectedPrices.value,
-    };
-    sessionStorage.setItem("saleItemsFilters", JSON.stringify(state));
-  },
-  { deep: true }
-);
 </script>
 
 <template>
   <div class="p-6">
-    <!-- Add Button + Sort -->
+    <!-- Add Button + Sort Section -->
     <div class="flex justify-between items-center mb-6">
       <BaseButton variant="add" label="Add Sale Item" @click="goToAddItem" />
+
+      <!-- ✅ ปุ่ม Sort -->
       <div class="space-x-2">
         <BaseButton
           variant="primary"
@@ -295,59 +277,92 @@ watch(
         </BaseButton>
       </div>
     </div>
-
-    <!-- Filters -->
+    <!-- Search Bar -->
+    <div class="mb-4 flex items-center gap-4">
+      <input
+        v-model="filters.searchKeyword"
+        type="text"
+        placeholder="ค้นหาสินค้า, รุ่น, สี, คำอธิบาย..."
+        class="border rounded px-3 py-2 w-full max-w-md focus:outline-none focus:ring focus:border-blue-400"
+        @keyup.enter="trigger++"
+      />
+      <BaseButton
+        variant="primary"
+        label="ค้นหา"
+        @click="trigger++"
+        class="px-4 py-2"
+      />
+    </div>
+    <!-- Filter Section -->
     <div class="flex flex-wrap gap-4 mb-4">
       <!-- Brand Filter -->
-      <!-- Filters -->
-      <div class="flex flex-wrap gap-4 mb-4">
-        <!-- Brand Filter -->
-        <div ref="dropdownRef" class="relative">
-          <div
-            class="flex items-center border px-3 py-2 rounded cursor-pointer"
-            @click="showBrandDropdown = !showBrandDropdown"
+      <div ref="dropdownRef" class="relative">
+        <div
+          class="flex items-center border px-3 py-2 rounded cursor-pointer"
+          @click="showBrandDropdown = !showBrandDropdown"
+        >
+          <span class="flex-1 text-gray-700">
+            Filter by brand(s):
+            <span v-if="selectedBrands.length" class="text-blue-600">
+              {{ selectedBrands.map((b) => b.name).join(", ") }}
+            </span>
+          </span>
+          <svg
+            v-if="showBrandDropdown"
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            <span class="flex-1 text-gray-700">
-              Filter by brand(s)
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="{2}"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+          <svg
+            v-else
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="{2}"
+              d="M5 15l7-7 7 7"
+            />
+          </svg>
+        </div>
+        <div
+          v-if="showBrandDropdown"
+          class="absolute bg-white border rounded shadow w-64 max-h-60 overflow-y-auto z-10"
+        >
+          <div
+            v-for="brand in brands"
+            :key="brand.id"
+            class="px-3 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+            @click="toggleBrand(brand)"
+          >
+            <div class="flex items-center">
+              <input
+                type="checkbox"
+                :checked="selectedBrands.some((b) => b.id === brand.id)"
+                class="mr-2"
+              />
+              {{ brand.name }}
+            </div>
+            <span
+              v-if="selectedBrands.some((b) => b.id === brand.id)"
+              class="text-blue-600"
+            >
+              &#10003;
             </span>
           </div>
-          <div
-            v-if="showBrandDropdown"
-            class="absolute bg-white border rounded shadow w-64 max-h-60 overflow-y-auto z-10"
-          >
-            <div
-              v-for="brand in sortedBrands"
-              :key="brand.id"
-              class="px-3 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center"
-              @click="toggleBrand(brand)"
-            >
-              <div class="flex items-center">
-                <input
-                  type="checkbox"
-                  :checked="selectedBrands.some((b) => b.id === brand.id)"
-                  class="mr-2"
-                />
-                {{ brand.name }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Selected brands chip -->
-        <div v-if="selectedBrands.length" class="flex flex-wrap gap-2 items-center">
-          <span
-            v-for="brand in selectedBrands"
-            :key="brand.id"
-            class="flex items-center bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm"
-          >
-            {{ brand.name }}
-            <button
-              class="ml-1 text-red-500 hover:text-red-700"
-              @click.stop="removeBrand(brand)"
-            >
-              ×
-            </button>
-          </span>
         </div>
       </div>
 
@@ -360,13 +375,39 @@ watch(
           <span class="flex-1 text-gray-700">
             Filter by storage:
             <span v-if="selectedStorages.length" class="text-blue-600">
-              {{
-                selectedStorages
-                  .map((s) => (s === -1 ? "No Storage" : s + " GB"))
-                  .join(", ")
-              }}
+              {{ selectedStorages.join(", ") }} GB
             </span>
           </span>
+          <svg
+            v-if="showStorageDropdown"
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="{2}"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+          <svg
+            v-else
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="{2}"
+              d="M5 15l7-7 7 7"
+            />
+          </svg>
         </div>
         <div
           v-if="showStorageDropdown"
@@ -384,7 +425,7 @@ watch(
                 :checked="selectedStorages.includes(s)"
                 class="mr-2"
               />
-              {{ s != -1 ? s + " GB" : "No Storage" }}
+              {{ s != 0 ? s + " GB" : "No Storage" }}
             </div>
             <span v-if="selectedStorages.includes(s)" class="text-blue-600">
               &#10003;
@@ -409,6 +450,36 @@ watch(
               {{ selectedPrices.max !== null ? selectedPrices.max : "" }}
             </span>
           </span>
+          <svg
+            v-if="showPriceDropdown"
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="{2}"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+          <svg
+            v-else
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="{2}"
+              d="M5 15l7-7 7 7"
+            />
+          </svg>
         </div>
         <div
           v-if="showPriceDropdown"
@@ -457,10 +528,15 @@ watch(
               />
             </div>
             <div class="flex gap-2 mt-2">
-              <button class="btn btn-sm btn-primary flex-1" @click="applyCustomPrice">
+              <button
+                class="btn btn-sm btn-primary flex-1"
+                @click="applyCustomPrice"
+              >
                 Apply
               </button>
-              <button class="btn btn-sm flex-1" @click="removePrice">Remove</button>
+              <button class="btn btn-sm flex-1" @click="removePrice">
+                Remove
+              </button>
             </div>
           </div>
         </div>
