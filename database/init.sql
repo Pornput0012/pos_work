@@ -51,6 +51,24 @@ CREATE TABLE sale_item (
   CONSTRAINT chk_color_not_empty CHECK (color IS NULL OR TRIM(color) <> '')
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE user_accounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nickname VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(200) NOT NULL UNIQUE,
+    password_hash VARCHAR(200) NOT NULL,
+    account_type VARCHAR(50) NOT NULL,
+    fullname VARCHAR(200),
+    mobile VARCHAR(20),
+    bank_account_no VARCHAR(50),
+    bank_name VARCHAR(100),
+    card_no VARCHAR(50),
+    front_card_photo_path VARCHAR(300),
+    back_card_photo_path VARCHAR(300),
+    created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) NOT NULL DEFAULT 'INACTIVE',
+    verification_token VARCHAR(200)
+);
+
 -- 6. Insert BRAND Table
 INSERT INTO brand (id, name, country_of_origin, website_url, is_active, created_on, updated_on)
 VALUES

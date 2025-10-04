@@ -20,25 +20,25 @@ public interface SaleItemRepository extends JpaRepository<SaleItem, Integer> {
             "      (:filterStorage IS NULL AND s.storageGb IS NULL) " +
             "   OR (:filterStorage IS NOT NULL AND s.storageGb IN :filterStorage) " +
             ") " +
-           "AND (:filterPriceLower IS NULL OR s.price >= :filterPriceLower) " +
-           "AND (:filterPriceUpper IS NULL OR s.price <= :filterPriceUpper)" +
+            "AND (:filterPriceLower IS NULL OR s.price >= :filterPriceLower) " +
+            "AND (:filterPriceUpper IS NULL OR s.price <= :filterPriceUpper) " +
             "AND (:searchKeyWord IS NULL OR " +
             "     LOWER(CAST(s.description AS string)) LIKE LOWER(CONCAT('%', :searchKeyWord, '%')) " +
             "     OR LOWER(CAST(s.model AS string)) LIKE LOWER(CONCAT('%', :searchKeyWord, '%')) " +
             "     OR LOWER(CAST(s.color AS string)) LIKE LOWER(CONCAT('%', :searchKeyWord, '%')) ) "
     )
     Page<SaleItem> findAllFilter(
-        Pageable page,
-        @Param("filterBrands") List<String> filterBrands,
-        @Param("filterStorage") List<Integer> filterStorage,
-        @Param("filterPriceLower") java.math.BigDecimal filterPriceLower,
-        @Param("filterPriceUpper") java.math.BigDecimal filterPriceUpper,
-        @Param("searchKeyWord") String searchKeyWord
+            Pageable page,
+            @Param("filterBrands") List<String> filterBrands,
+            @Param("filterStorage") List<Integer> filterStorage,
+            @Param("filterPriceLower") java.math.BigDecimal filterPriceLower,
+            @Param("filterPriceUpper") java.math.BigDecimal filterPriceUpper,
+            @Param("searchKeyWord") String searchKeyword
     );
 
     @Query("SELECT s FROM SaleItem s WHERE (:filterBrands IS NULL OR s.brand.name IN :filterBrands) " +
             "AND (:filterPriceLower IS NULL OR s.price >= :filterPriceLower) " +
-            "AND (:filterPriceUpper IS NULL OR s.price <= :filterPriceUpper)"+
+            "AND (:filterPriceUpper IS NULL OR s.price <= :filterPriceUpper) " +
             "AND (:searchKeyWord IS NULL OR " +
             "     LOWER(CAST(s.description AS string)) LIKE LOWER(CONCAT('%', :searchKeyWord, '%')) " +
             "     OR LOWER(CAST(s.model AS string)) LIKE LOWER(CONCAT('%', :searchKeyWord, '%')) " +
@@ -51,5 +51,4 @@ public interface SaleItemRepository extends JpaRepository<SaleItem, Integer> {
             @Param("filterPriceUpper") java.math.BigDecimal filterPriceUpper,
             @Param("searchKeyWord") String searchKeyWord
     );
-
 }

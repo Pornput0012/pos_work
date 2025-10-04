@@ -90,55 +90,31 @@ const generateUniqueFileName = (originalName) => {
 
 const swapUpImage = (i) => {
   if (i <= 0) return;
-  // สลับตำแหน่งกับภาพก่อนหน้า
+  
   const temp = images.value[i];
   images.value[i] = images.value[i - 1];
   images.value[i - 1] = temp;
 
-  // อัปเดต showImageIndex
   if (showImageIndex.value === i) {
     showImageIndex.value = i - 1;
   } else if (showImageIndex.value === i - 1) {
     showImageIndex.value = i;
   }
+  
+  updateReorderedImages();
 };
 
 const swapDownImage = (i) => {
-  const activeIdx = activeImages.value.indexOf(images.value[i]);
-  if (activeIdx === -1) return;
-
-  // ถ้ามี active มากกว่า 1 ใช้ logic เดิม
-  if (activeImages.value.length > 1) {
-    const nextActiveImage = activeImages.value[activeIdx + 1];
-    if (!nextActiveImage) return;
-    const nextIndex = images.value.indexOf(nextActiveImage);
-    const temp = images.value[i];
-    images.value[i] = images.value[nextIndex];
-    images.value[nextIndex] = temp;
-
-    if (showImageIndex.value === i) {
-      showImageIndex.value = nextIndex;
-    } else if (showImageIndex.value === nextIndex) {
-      showImageIndex.value = i;
-    }
-    return;
+  while (images.value.length < maxImages) {
+    images.value.push({
+      imageName: "",
+      src: null,
+      isOriginal: false,
+      isDeleted: false,
+      isEmpty: true,
+    });
   }
 
-  // กรณีมี active รูปเดียว ให้เลื่อนรูปไป index ถัดไป (placeholder)
-  if (images.value.length < maxImages) {
-    // เติม placeholder จนครบ 4 ช่อง
-    while (images.value.length < maxImages) {
-      images.value.push({
-        imageName: "",
-        src: null,
-        isOriginal: false,
-        isDeleted: false, // ไม่ใช่ deleted, เป็น empty slot
-        isEmpty: true,
-      });
-    }
-  }
-
-  // หา index ของ placeholder ถัดไป
   const nextIndex = i + 1;
   if (nextIndex >= images.value.length) return;
 
@@ -151,6 +127,8 @@ const swapDownImage = (i) => {
   } else if (showImageIndex.value === nextIndex) {
     showImageIndex.value = i;
   }
+  
+  updateReorderedImages();
 };
 
 const removeImage = (index) => {

@@ -7,9 +7,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import sit.backend.ListMapper;
 import sit.backend.configurations.FileStorageProperties;
+import sit.backend.configurations.JwtProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties(FileStorageProperties.class)
+@EnableConfigurationProperties({FileStorageProperties.class, JwtProperties.class})
 
 public class BackendApplication {
 

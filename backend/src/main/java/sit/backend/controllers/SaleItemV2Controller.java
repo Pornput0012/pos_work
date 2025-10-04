@@ -42,12 +42,13 @@ public class SaleItemV2Controller {
             @RequestParam(required = false) Integer filterPriceLower,
             @RequestParam(required = false) Integer filterPriceUpper,
             @RequestParam(required = false) String searchKeyword) throws MissingServletRequestParameterException {
-        
+
         if (page == null || size == null) {
             throw new MissingServletRequestParameterException(page == null ? "page" : "size", "Integer");
         }
         PageDto<SaleItemDto> pagedResult = saleItemService.getAllSaleItemsPage(page, size, filterBrands, sortField,
                 sortDirection, filterStorages, filterPriceLower, filterPriceUpper, searchKeyword);
+        System.out.println(searchKeyword);
         return ResponseEntity.ok(pagedResult);
     }
 
@@ -76,7 +77,7 @@ public class SaleItemV2Controller {
     @PutMapping("/{id}/images")
     public ResponseEntity<SaleItemResponseDtoV2> updateProductImages(
             @PathVariable Integer id,
-             @ModelAttribute CreateSaleItemDtoV2 productImageInfo,
+            @ModelAttribute CreateSaleItemDtoV2 productImageInfo,
             @RequestParam(required = false) List<MultipartFile> newImages) {
         return ResponseEntity.ok(saleItemService.updateProductV2(id, productImageInfo.getRemoveFileNames(), productImageInfo.getOrderImages(), newImages));
     }

@@ -82,13 +82,13 @@ public class SaleItemService {
         Sort sort;
         if (hasSortField) {
             sort = sortDesc
-                ? Sort.by(Sort.Order.desc(sortField))
-                : Sort.by(Sort.Order.asc(sortField));
+                    ? Sort.by(Sort.Order.desc(sortField))
+                    : Sort.by(Sort.Order.asc(sortField));
             sort = sort.and(Sort.by(Sort.Order.asc("id")));
         } else {
             sort = sortDesc
-                ? Sort.by(Sort.Order.desc("createdOn")).and(Sort.by(Sort.Order.desc("id")))
-                : Sort.by(Sort.Order.asc("createdOn")).and(Sort.by(Sort.Order.asc("id")));
+                    ? Sort.by(Sort.Order.desc("createdOn")).and(Sort.by(Sort.Order.desc("id")))
+                    : Sort.by(Sort.Order.asc("createdOn")).and(Sort.by(Sort.Order.asc("id")));
         }
 
         if (page == null || page < 0) page = 0;
@@ -99,8 +99,8 @@ public class SaleItemService {
         List<String> cleanedBrands = null;
         if (filterBrands != null) {
             cleanedBrands = filterBrands.stream()
-                .filter(brand -> brand != null && !brand.trim().isEmpty() && !brand.equals("[]"))
-                .collect(Collectors.toList());
+                    .filter(brand -> brand != null && !brand.trim().isEmpty() && !brand.equals("[]"))
+                    .collect(Collectors.toList());
             if (cleanedBrands.isEmpty()) {
                 cleanedBrands = null;
             }
@@ -117,60 +117,59 @@ public class SaleItemService {
             if (hasZero && !nonZeroStorages.isEmpty()) {
                 // Query รอบแรก: เฉพาะเลขที่ไม่ใช่ 0
                 Page<SaleItem> pageNonZero = saleItemRepository.findAllFilter(
-                    pageable,
-                    (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
-                    nonZeroStorages,
-                    priceLower,
-                    priceUpper,
-                        searchKeyWord
+                        pageable,
+                        (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+                        nonZeroStorages,
+                        priceLower,
+                        priceUpper, searchKeyWord
                 );
                 allItems.addAll(pageNonZero.getContent());
                 // Query รอบสอง: เฉพาะ null
                 Page<SaleItem> pageNull = saleItemRepository.findAllFilter(
-                    pageable,
-                    (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
-                    null,
-                    priceLower,
-                    priceUpper, searchKeyWord
+                        pageable,
+                        (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+                        null,
+                        priceLower,
+                        priceUpper, searchKeyWord
                 );
                 allItems.addAll(pageNull.getContent());
                 // สร้าง PageDto จาก allItems
                 PageDto<SaleItemDto> result = new PageDto<SaleItemDto>();
                 result.setContent(listMapper.mapList(allItems, SaleItemDto.class, modelMapper));
-                result.setTotalPages(1); 
+                result.setTotalPages(1);
                 result.setPage(page);
                 result.setSize(size);
                 return result;
             } else if (hasZero) {
                 // มีแต่ 0: query เฉพาะ null
                 Page<SaleItem> pageNull = saleItemRepository.findAllFilter(
-                    pageable,
-                    (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
-                    null,
-                    priceLower,
-                    priceUpper, searchKeyWord
+                        pageable,
+                        (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+                        null,
+                        priceLower,
+                        priceUpper, searchKeyWord
                 );
                 return listMapper.toPageDTO(pageNull, SaleItemDto.class, modelMapper);
             } else {
                 // มีแต่เลขอื่น: query ปกติ
                 Page<SaleItem> pageNonZero = saleItemRepository.findAllFilter(
-                    pageable,
-                    (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
-                    filterStorages,
-                    priceLower,
-                    priceUpper, searchKeyWord
+                        pageable,
+                        (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
+                        filterStorages,
+                        priceLower,
+                        priceUpper, searchKeyWord
                 );
                 return listMapper.toPageDTO(pageNonZero, SaleItemDto.class, modelMapper);
             }
-            } else if (filterStorages == null) {
-                Page<SaleItem> pageDefault = saleItemRepository.findAllFilterAndNoFilterStorage(
+        } else if (filterStorages == null) {
+            Page<SaleItem> pageDefault = saleItemRepository.findAllFilterAndNoFilterStorage(
                     pageable,
                     (cleanedBrands != null && !cleanedBrands.isEmpty()) ? cleanedBrands : null,
                     priceLower,
                     priceUpper, searchKeyWord
-                );
-                return listMapper.toPageDTO(pageDefault, SaleItemDto.class, modelMapper);
-            }
+            );
+            return listMapper.toPageDTO(pageDefault, SaleItemDto.class, modelMapper);
+        }
         return null;
     }
 
@@ -294,7 +293,7 @@ public class SaleItemService {
 
     @Transactional
     public SaleItemResponseDtoV2 updateProductV2(Integer id, CreateSaleItemDtoV2 product, String removeImage,
-                                                   String orderImages, List<MultipartFile> newImages) {
+                                                 String orderImages, List<MultipartFile> newImages) {
         SaleItem existingProduct = saleItemRepository.findById(id)
                 .orElseThrow(() -> new SaleItemNotFound(id));
         Brand existingBrand = brandRepository.findById(product.getBrandId())
@@ -354,7 +353,7 @@ public class SaleItemService {
                         // ถ้าชื่อไฟล์เปลี่ยน
                         if (!existingImage.getFileName().equals(newFileName)) {
                             // เปลี่ยนชื่อไฟล์ในโฟลเดอร์
-                            fileService.renameFile( existingImage.getFileName(), newFileName);
+                            fileService.renameFile(existingImage.getFileName(), newFileName);
                             // เปลี่ยนชื่อไฟล์ใน DB
                             saleItemImageService.updateFileName(existingImage.getId(), newFileName);
                         }
@@ -383,7 +382,7 @@ public class SaleItemService {
 
     @Transactional
     public SaleItemResponseDtoV2 updateProductV2(Integer id, String removeImage, String orderImages,
-                                                   List<MultipartFile> newImages) {
+                                                 List<MultipartFile> newImages) {
         SaleItem existingProduct = saleItemRepository.findById(id)
                 .orElseThrow(() -> new SaleItemNotFound(id));
 
@@ -436,7 +435,7 @@ public class SaleItemService {
                         if (!existingImage.getFileName().equals(newFileName)) {
                             System.out.println(
                                     "[DEBUG] Rename file " + existingImage.getFileName() + " -> " + newFileName);
-                            fileService.renameFile( existingImage.getFileName(), newFileName);
+                            fileService.renameFile(existingImage.getFileName(), newFileName);
                             saleItemImageService.updateFileName(existingImage.getId(), newFileName);
                         }
                         if (!newOrder.equals(existingImage.getImageViewOrder())) {

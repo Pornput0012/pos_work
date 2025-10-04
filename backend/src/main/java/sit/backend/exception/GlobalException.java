@@ -34,13 +34,13 @@ public class GlobalException {
         return buildErrorResponse(ex.getMessage(), request, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneralException(
-            Exception ex,
-            HttpServletRequest request
-    ) {
-        return buildErrorResponse("Internal Server Error", request, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+//    @ExceptionHandler(Exception.class)
+//    public ResponseEntity<Map<String, Object>> handleGeneralException(
+//            Exception ex,
+//            HttpServletRequest request
+//    ) {
+//        return buildErrorResponse("Internal Server Error", request, HttpStatus.INTERNAL_SERVER_ERROR);
+//    }
 
     private ResponseEntity<Map<String, Object>> buildErrorResponse(
             String message,
